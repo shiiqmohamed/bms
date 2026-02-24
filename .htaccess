@@ -1,0 +1,32 @@
+cat > manage.sh << 'EOF'
+#!/bin/bash
+case "$1" in
+  start)
+    source setenv.sh
+    nohup ./bms_api > bms_output.log 2>&1 &
+    echo "✅ BMS API started"
+    ;;
+  stop)
+    pkill -f bms_api
+    echo "🛑 BMS API stopped"
+    ;;
+  restart)
+    pkill -f bms_api
+    sleep 2
+    source setenv.sh
+    nohup ./bms_api > bms_output.log 2>&1 &
+    echo "🔄 BMS API restarted"
+    ;;
+  status)
+    ps aux | grep bms_api | grep -v grep || echo "❌ Not running"
+    ;;
+  logs)
+    tail -f bms_output.log
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart|status|logs}"
+    ;;
+esac
+EOF
+
+chmod +x manage.sh
