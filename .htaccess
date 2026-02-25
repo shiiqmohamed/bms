@@ -1,32 +1,28 @@
-cat > manage.sh << 'EOF'
-#!/bin/bash
-case "$1" in
-  start)
-    source setenv.sh
-    nohup ./bms_api > bms_output.log 2>&1 &
-    echo "✅ BMS API started"
-    ;;
-  stop)
-    pkill -f bms_api
-    echo "🛑 BMS API stopped"
-    ;;
-  restart)
-    pkill -f bms_api
-    sleep 2
-    source setenv.sh
-    nohup ./bms_api > bms_output.log 2>&1 &
-    echo "🔄 BMS API restarted"
-    ;;
-  status)
-    ps aux | grep bms_api | grep -v grep || echo "❌ Not running"
-    ;;
-  logs)
-    tail -f bms_output.log
-    ;;
-  *)
-    echo "Usage: $0 {start|stop|restart|status|logs}"
-    ;;
-esac
-EOF
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Force HTTPS (uncomment after SSL is installed)
+    # RewriteCond %{HTTPS} off
+    # RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
+    
+    # BMS Subdomain - Proxy to Go API
+    RewriteCond %{HTTP_HOST} ^bms\.somaalict\.com$ [NC]
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ http://localhost:8081/$1 [P,L]
+    
+    # Health check specific
+    RewriteCond %{HTTP_HOST} ^bms\.somaalict\.com$ [NC]
+    RewriteRule ^health$ http://localhost:8081/health [P,L]
+</IfModule>
 
-chmod +x manage.sh
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization"
+</IfModule>
+
+# Error documents
+ErrorDocument 404 /404.html
+ErrorDocument 500 /500.html
+ErrorDocument 503 /503.html

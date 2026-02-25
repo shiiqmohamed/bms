@@ -1,3 +1,4 @@
+#setup.sh
 #!/bin/bash
 
 echo "🚀 Setting up BMS Project..."
@@ -37,4 +38,4 @@ echo "1. Edit .env file with your database credentials"
 echo "2. Run: ./scripts/db-setup.sh"
 echo "3. Run: go run cmd/main.go"
 echo ""
-echo "📡 API will be available at: http://localhost:8080"
+echo "📡 API will be available at: http://localhost:8081"

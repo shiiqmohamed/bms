@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-
-	"github.com/shiiqmohamed/bms/internal/config"
+	"os"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -13,23 +13,47 @@ import (
 var DB *sql.DB
 
 func InitializeDB() error {
-	cfg := config.LoadConfig()
-	
+	// Use environment variables directly
+	host := os.Getenv("DB_HOST")
+	port := os.Getenv("DB_PORT")
+	user := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	dbname := os.Getenv("DB_NAME")
+
+	// Debug logging
+	log.Printf("Attempting to connect to database: %s@%s:%s/%s", user, host, port, dbname)
+
+	// IMPORTANT: sslmode=require for Neon.tech
 	connStr := fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-		cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName,
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=require connect_timeout=10",
+		host, port, user, password, dbname,
 	)
-	
+
 	var err error
 	DB, err = sql.Open("postgres", connStr)
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
-	
-	if err = DB.Ping(); err != nil {
-		return fmt.Errorf("failed to ping database: %w", err)
+
+	// Set connection pool settings
+	DB.SetMaxOpenConns(10)
+	DB.SetMaxIdleConns(5)
+	DB.SetConnMaxLifetime(5 * time.Minute)
+
+	// Try to ping with retry
+	for i := 0; i < 3; i++ {
+		err = DB.Ping()
+		if err == nil {
+			break
+		}
+		log.Printf("Ping attempt %d failed: %v", i+1, err)
+		time.Sleep(2 * time.Second)
 	}
-	
+
+	if err != nil {
+		return fmt.Errorf("failed to ping database after retries: %w", err)
+	}
+
 	log.Println("✅ Database connected successfully")
 	return nil
 }
